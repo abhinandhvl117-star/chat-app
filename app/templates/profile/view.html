@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="profile-container">
+
+    <div class="profile-card">
+        <div class="profile-avatar-wrap">
+            <img src="{{ url_for('static', filename='uploads/' + user.profile_picture) }}"
+                 alt="{{ user.username }}" class="profile-avatar">
+            <span class="online-badge {% if user.is_online %}online{% endif %}">
+                {{ 'Online' if user.is_online else 'Offline' }}
+            </span>
+        </div>
+
+        <div class="profile-info">
+            <h1 class="profile-username">{{ user.username }}</h1>
+
+            <p class="profile-meta">
+                Joined {{ user.created_at.strftime("%B %Y") }}
+                &nbsp;·&nbsp;
+                {% if user.is_online %}
+                    Online now
+                {% else %}
+                    Last seen {{ user.last_seen.strftime('%b %d at %H:%M') }}
+                {% endif %}
+            </p>                                                   
+
+            <div class="profile-actions">
+                {% if is_self %}
+                    <a href="{{ url_for('profile.edit') }}" class="btn btn-secondary">Edit Profile</a>
+                {% else %}
+                    <a href="{{ url_for('chat.private', user_id=user.id) }}"
+                       class="btn btn-primary">Message</a>
+
+                    {% if is_friend %}
+                        <form method="POST"
+                              action="{{ url_for('friends.remove_friend', user_id=user.id) }}"
+                              style="display: inline;">               
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('Remove {{ user.username }} from friends?')">
+                                Remove Friend
+                            </button>
+                        </form>
+                    {% elif request_sent %}
+                        <button class="btn btn-secondary" disabled>Request Sent</button>
+                    {% else %}
+                        <form action="{{ url_for('friends.send_request', user_id=user.id) }}"
+                              method="POST"
+                              style="display: inline;">                
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success">Add Friend</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-section">
+        <h2>Friends <span class="badge">{{ friends|length }}</span></h2>  
+        {% if friends %}
+            <div class="friends-grid">
+                {% for friend in friends %}
+                    <a href="{{ url_for('profile.view', username=friend.username) }}"
+                       class="friend-card">
+                        <img src="{{ url_for('static', filename='uploads/' + friend.profile_picture) }}"
+                             alt="{{ friend.username }}" class="avatar-md"/>
+                        <span class="friend-name">{{ friend.username }}</span>
+                        <span class="online-dot {% if friend.is_online %}online{% endif %}"></span>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No friends yet.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

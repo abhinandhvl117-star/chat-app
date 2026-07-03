@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>Friends</h1>
+        <div class="search-wrapper-large">
+            <input type="text" id="friend-search" placeholder="Search" autocomplete="off">
+            <div id="friend-search-results" class="search-dropdown"></div>
+        </div>
+    </div>
+
+    {% if pending_received %}
+    <section class="friends-section">
+        <h2>Incoming Requests
+            <span class="badge badge-warning">{{ pending_received|length }}</span>
+        </h2>
+        <div class="request-list">
+            {% for req in pending_received %}
+                <div class="request-card">
+                    <a href="{{ url_for('profile.view', username=req.sender.username) }}">
+                        <img src="{{ url_for('static', filename='uploads/' + req.sender.profile_picture) }}"
+                             alt="{{ req.sender.username }}" class="avatar-md">
+                    </a>
+                    <div class="request-info">
+                        <a href="{{ url_for('profile.view', username=req.sender.username) }}"
+                           class="request-username">             <!-- ← fixed useraname typo -->
+                            {{ req.sender.username }}
+                        </a>
+                        <span class="request-time">{{ req.created_at.strftime('%b %d') }}</span>
+                    </div>
+                    <div class="request-actions">
+                        <form action="{{ url_for('friends.accept_request', request_id=req.id) }}"
+                              method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success btn-sm">Accept</button>
+                        </form>
+                        <form action="{{ url_for('friends.reject_request', request_id=req.id) }}"
+                              method="POST" style="display: inline;">  <!-- ← fixed reject_request -->
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-ghost btn-sm">Decline</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if pending_sent %}                                      
+    <section class="friends-section">
+        <h2>Sent Requests</h2>
+        <div class="request-list">
+            {% for req in pending_sent %}
+                <div class="request-card">
+                    <img src="{{ url_for('static', filename='uploads/' + req.receiver.profile_picture) }}"
+                         alt="{{ req.receiver.username }}" class="avatar-md">
+                    <div class="request-info">
+                        <a href="{{ url_for('profile.view', username=req.receiver.username) }}"
+                           class="request-username">{{ req.receiver.username }}</a>
+                        <span class="badge badge-pending">Pending</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="friends-section">
+        <h2>My Friends <span class="badge">{{ friends|length }}</span></h2>
+        {% if friends %}
+            <div class="friends-grid">
+                {% for friend in friends %}                     
+                    <div class="friend-card">
+                        <a href="{{ url_for('profile.view', username=friend.username) }}">
+                            <img src="{{ url_for('static', filename='uploads/' + friend.profile_picture) }}"
+                                 alt="{{ friend.username }}" class="avatar-md">  <!-- ← fixed url_for -->
+                        </a>
+                        <div class="friend-card-info">
+                            <a href="{{ url_for('profile.view', username=friend.username) }}"
+                               class="friend-name">{{ friend.username }}</a>
+                            <span class="online-dot {% if friend.is_online %}online{% endif %}"></span>
+                        </div>
+                        <div class="friend-card-actions">
+                            <a href="{{ url_for('chat.private', user_id=friend.id) }}"
+                               class="btn btn-primary btn-sm">Message</a>
+                            <form action="{{ url_for('friends.remove_friend', user_id=friend.id) }}"
+                                  method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-ghost btn-sm"
+                                        onclick="return confirm('Remove {{ friend.username }}?')">
+                                    Remove
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>You haven't added any friends yet.</p>
+                <p>Use the search bar above to find people.</p>
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const friendSearch = document.getElementById('friend-search');
+  const friendResults = document.getElementById('friend-search-results');
+
+  if (friendSearch) {
+    let timeout;
+    friendSearch.addEventListener('input', function() {
+      clearTimeout(timeout);
+      const q = this.value.trim();
+      if (q.length < 2) {
+        friendResults.innerHTML = '';
+        friendResults.classList.remove('visible');
+        return;
+      }
+      timeout = setTimeout(() => {
+        fetch(`${CONFIG.searchUrl}?q=${encodeURIComponent(q)}`)
+          .then(r => r.json())
+          .then(users => {
+            friendResults.innerHTML = users.map(u => `
+              <div class="search-result-item">
+                <img src="/static/uploads/${u.profile_picture}" class="avatar-xs"/>
+                <a href="${u.profile_url}" class="search-username">${u.username}</a>
+                ${u.is_friend
+                  ? '<span class="badge badge-friend">Friend</span>'
+                  : u.request_sent
+                    ? '<span class="badge badge-pending">Sent</span>'
+                    : `<form method="POST" action="/friends/request/${u.id}" style="display:inline">
+                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                         <button class="btn btn-success btn-sm">Add</button>
+                       </form>`
+                }
+              </div>
+            `).join('') || '<div class="search-result-item">No users found</div>';
+            friendResults.classList.add('visible');
+          });
+      }, 300);
+    });
+    document.addEventListener('click', e => {
+      if (!friendSearch.contains(e.target)) friendResults.classList.remove('visible');
+    });
+  }
+</script>
+{% endblock %}

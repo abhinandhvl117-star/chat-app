@@ -1,0 +1,11 @@
+venv/
+.env
+*.pyc
+__pycache__/
+chatapp.db
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+migrations/
+*.egg-info/
+dist/
+.DS_Store

@@ -1,0 +1,40 @@
+# Web Framework
+Flask==3.0.3
+
+# Database ORM
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.30
+
+# Database Migrations
+Flask-Migrate==4.0.7
+alembic==1.13.1
+
+# Authentication & Session Management
+Flask-Login==0.6.3
+
+# Form & CSRF Protection
+Flask-WTF==1.2.1
+WTForms==3.1.2
+
+# Websockets / Real-Time
+Flask-SocketIO==5.3.6
+python-socketio==5.11.2
+python-engineio==4.9.1
+
+# Password Hashing (bundle with Flask via Werkzeug)
+Werkzeug==3.0.3
+
+# Image Processing for profile pictures
+Pillow==11.3.0
+
+# Environment variable Management
+python-dotenv==1.0.1
+
+# Production WSGI server
+gunicorn==22.0.0
+
+# PostgreSQL driver(only for production)
+psycopg2-binary==2.9.9
+
+# Email validation
+email-validator==2.1.1

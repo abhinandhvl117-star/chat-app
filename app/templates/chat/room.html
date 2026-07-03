@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block body_class %}chat-page{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+    
+    <div class="chat-header">
+        <div class="chat-header-left">
+            <span class="room-hash-large">#</span>
+            <div>
+                <h2>{{ room.name }}</h2>
+                <span class="chat-subtitle" id="member-count">{{ room.member_count }} members</span>
+            </div>
+        </div>
+
+        <div class="chat-header-right">
+            <form action="{{ url_for('chat.leave_room_route', room_id=room.id) }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('Leave this room?')">Leave</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="messages-area" class="messages-area">
+        {% for msg in messages %}
+            <div class="message {% if msg.user_id == current_user.id %}message-own{% endif %}" data-msg-id="{{ msg.id }}">
+                <img src="{{ url_for('static', filename='uploads/' + msg.author.profile_picture) }}" alt="{{ msg.author.username }}" class="avatar-sm message-avatar">
+                <div class="message-body">
+                    <div class="message-meta">
+                        <a href="{{ url_for('profile.view', username=msg.author.username) }}" class="message-author">
+                            {{ msg.author.username }}
+                        </a>
+                        <span class="message-time">{{ msg.timestamp.strftime('%H:%M') }}</span>
+                    </div>
+                    <div class="message-content">{{ msg.content }}</div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div id="typing-indicator" class="typing-indicator" style="display: none; margin-top: 0.75rem;">
+        <span id="typing-text"></span>
+    </div>
+
+    <div class="chat-input-area">
+        <input type="text"
+                id="message-input"
+                class="chat-input"
+                placeholder="Message #{{ room.name }}"
+                maxlength="2000"
+                autocomplete="off">
+        <button class="btn btn-primary" id="send-btn">Send</button>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script>
+    initRoomChat({{ room.id|tojson }});
+</script>
+{% endblock %}

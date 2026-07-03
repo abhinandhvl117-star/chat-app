@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block body_class %}chat-page{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+
+    <div class="chat-header">
+        <div class="chat-header-left">
+            <span class="online-dot {% if other_user.is_online %}online{% endif %}"></span>
+            <img src="{{ url_for('static', filename='uploads/' + other_user.profile_picture) }}" alt="{{ other_user.username }}" class="avatar-sm">
+            <div>
+                <h2>{{ other_user.username }}</h2>
+                <span class="chat-subtitle">
+                    {% if other_user.is_online %}
+                    Online
+                    {% else %}
+                    Last seen {{ other_user.last_seen.strftime('%b %d at %H:%M') }}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="chat-header-right">
+            <a href="{{ url_for('profile.view', username=other_user.username) }}" class="btn btn-ghost btn-sm">View Profile</a>
+        </div>
+    </div>
+
+    <div id="messages-area" class="messages-area">
+        {% for msg in messages %}
+            <div class="message {% if msg.sender_id == current_user.id %}message-own{% endif %}" data-msg-id="{{ msg.id }}">
+                <img src="{{ url_for('static', filename='uploads/' + msg.sender.profile_picture) }}" alt="{{ msg.sender.username }}" class="avatar-sm message-avatar">
+                <div class="message-body">
+                    <div class="message-meta">
+                        <span class="message-author">{{ msg.sender.username }}</span>
+                        <span class="message-time">{{ msg.timestamp.strftime("%H:%M") }}</span>
+                        {% if msg.sender_id == current_user.id %}
+                            <span class="read-status">{{ '✓✓' if msg.is_read else '✓' }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="message-content">{{ msg.content }}</div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="typing-indicator" id="typing-indicator" style="display: none;">
+        <span>{{ other_user.username }} is typing..</span>
+    </div>
+
+    <div class="chat-input-area">
+        <input type="text" 
+               id="message-input" 
+               class="chat-input"
+               placeholder="Message {{ other_user.username }}"
+               maxlength="2000"
+               autocomplete="off">
+        <button id="send-btn" class="btn btn-primary">Send</button>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/private.js') }}"></script>
+<script>
+  initPrivateChat({{ other_user.id }});
+</script>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="form-page-container">
+    <div class="form-card">
+        <h1>Edit Profile</h1>
+
+        <form action="{{ url_for('profile.edit') }}" method="POST"
+              enctype="multipart/form-data" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="avatar-preview-wrap">
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}"
+                     alt="Current avatar" class="avatar-preview" id="avatar-preview">
+                <label for="{{ form.profile_picture.id }}" class="avatar-upload-label">
+                    Change Photo
+                </label>
+            </div>
+
+            <div class="form-group" style="display: none;">
+                {{ form.profile_picture(id=form.profile_picture.id, onchange='previewImage(event)') }}
+                {% for error in form.profile_picture.errors %}
+                    <span class="form-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <!-- ← username field added -->
+            <div class="form-group">
+                {{ form.username.label(class='form-label') }}
+                {{ form.username(class='form-input' + (' input-error' if form.username.errors else '')) }}
+                {% for error in form.username.errors %}
+                    <span class="form-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.bio.label(class='form-label') }}
+                {{ form.bio(class='form-input form-textarea',
+                            placeholder='Tell people a bit about yourself.',
+                            rows=4) }}                             
+                {% for error in form.bio.errors %}
+                    <span class="form-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="{{ url_for('profile.view', username=current_user.username) }}"
+                   class="btn btn-ghost">Cancel</a>                 
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}                                                       
+
+{% block scripts %}                                                  
+<script>
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('avatar-preview').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+</script>
+{% endblock %}

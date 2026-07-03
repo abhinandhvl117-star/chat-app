@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %} {{ title }} - ChatApp{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"/>
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"/>
+
+    <!-- Socket.IO client — must load before any JS that uses socket -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="{{ url_for('chat.rooms') }}">ChatApp</a>
+        </div>
+
+        <div class="navbar-center">
+            {% if current_user.is_authenticated %}
+            <div class="search-wrapper">
+                <input type="text" id="global-search" placeholder="Search" autocomplete="off">
+                <div class="search-dropdown" id="search-results"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="navbar-actions">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('friends.index') }}" class="nav-link">Friends</a>
+                <a href="{{ url_for('chat.rooms') }}" class="nav-link">Rooms</a>
+                <a href="{{ url_for('profile.view', username=current_user.username) }}" class="nav-avatar">
+                    <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}" alt="{{ current_user.username }}" class="avatar-sm">
+                    <span>{{ current_user.username }}</span>
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link nav-logout">Logout</a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="nav-link">Log In</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Sign Up</a>
+            {% endif %}
+        </div>
+    </nav>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        <span>{{ message }}</span>
+                        <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="app-layout">
+        {% if current_user.is_authenticated %}
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">My Rooms</h3>
+                    {% for room in current_user.rooms.all() %}
+                        <a href="{{ url_for('chat.room', room_id=room.id) }}"
+                            class="sidebar-link {% if request.path == url_for('chat.room', room_id=room.id) %}active{% endif %}">
+                            <span class="room-hash">#</span>{{ room.name }}
+                        </a>
+                    {% else %}
+                        <p class="sidebar-empty">No rooms yet.
+                            <a href="{{ url_for('chat.rooms') }}">Browse rooms</a>
+                        </p>
+                    {% endfor %}
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Friends</h3>
+                    {% set friends = current_user.get_friends() %}
+                    {% for friend in friends[:8] %}
+                        <a href="{{ url_for('chat.private', user_id=friend.id) }}" class="sidebar-link sidebar-friend">
+                            <span class="online-dot {% if friend.is_online %}online{% endif %}"></span>
+                            <img src="{{ url_for('static', filename='uploads/' + friend.profile_picture) }}" alt="{{ friend.username }}" class="avatar-xs">
+                            <span>{{ friend.username }}</span>
+                        </a>
+                    {% else %}
+                        <p class="sidebar-empty">No friends yet. <a href="{{ url_for('friends.index') }}">Find people</a></p>
+                    {% endfor %}
+                </div>
+            </aside>
+        {% endif %}
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        const CONFIG = {
+        currentUserId: {{ current_user.id if current_user.is_authenticated else 'null' }},
+        currentUsername: "{{ current_user.username if current_user.is_authenticated else '' }}",
+        searchUrl: "{{ url_for('friends.search') }}",
+        privateUrl: "/chat/private/",
+        };
+    </script>
+
+    <script>
+        const searchInput = document.getElementById('global-search')
+        const searchResults = document.getElementById('search-results')
+
+        if (searchInput) {
+            let searchTimeout;
+
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+
+                if (query.length < 2) {
+                    searchResults.innerHTML = '';
+                    searchResults.classList.remove('visible');
+                    return;
+                }
+
+                searchTimeout = setTimeout(() => {
+                    fetch(`${CONFIG.searchUrl}?q=${encodeURIComponent(query)}`)
+                        .then(r => r.json())
+                        .then(users => {
+                            if (users.length === 0) {
+                                searchResults.innerHTML = '<div class="search-result-item">No users found</div>'
+                            } else {
+                                searchResults.innerHTML = users.map(u => `
+                               <a href="${u.profile_url}" class="search-result-item">
+                                    <img src="/static/uploads/${u.profile_picture}" class="avatar-xs" alt="${u.username}"/>
+                                    <span class="search-username">${u.username}</span>
+                                    ${u.is_friend ? '<span class="badge badge-friend">Friend</span>' : ''}
+                               </a>` ).join('')
+                            }
+                            searchResults.classList.add('visible');
+                        });
+                }, 300);
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.classList.remove('visible');
+                }
+            });
+        }
+
+        setTimeout(() => {
+            document.querySelectorAll('.flash').forEach(el => el.remove());
+        }, 5000)
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
